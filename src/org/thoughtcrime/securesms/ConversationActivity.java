@@ -40,25 +40,32 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.style.RelativeSizeSpan;
 import android.util.Log;
-import android.view.ContextMenu;
 import android.view.ContextThemeWrapper;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnFocusChangeListener;
 import android.view.View.OnKeyListener;
+import android.view.View.OnLongClickListener;
+import android.view.WindowManager.LayoutParams;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ListView;
+import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.protobuf.ByteString;
 
+import org.thoughtcrime.securesms.TransportOptionsAdapter.TransportOption;
 import org.thoughtcrime.securesms.components.EmojiDrawer;
 import org.thoughtcrime.securesms.components.EmojiToggle;
 import org.thoughtcrime.securesms.contacts.ContactAccessor;
@@ -111,8 +118,11 @@ import org.whispersystems.libaxolotl.state.SessionStore;
 import org.whispersystems.textsecure.api.push.PushAddress;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import static org.thoughtcrime.securesms.database.GroupDatabase.GroupRecord;
 import static org.thoughtcrime.securesms.recipients.Recipient.RecipientModifiedListener;
@@ -150,10 +160,11 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
                                                          R.attr.conversation_send_button_sms_secure,
                                                          R.attr.conversation_send_button_sms_insecure};
 
-  private MasterSecret    masterSecret;
-  private EditText        composeText;
-  private ImageButton     sendButton;
-  private TextView        charactersLeft;
+  private MasterSecret masterSecret;
+  private EditText     composeText;
+  private ImageButton  sendButton;
+  private TextView     charactersLeft;
+  private PopupWindow  transportPopup;
 
   private AttachmentTypeSelectorAdapter attachmentAdapter;
   private AttachmentManager             attachmentManager;
@@ -168,6 +179,11 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
   private boolean    isEncryptedConversation;
   private boolean    isMmsEnabled = true;
   private boolean    isCharactersLeftViewEnabled;
+
+  private final List<String>                 enabledTransports = new ArrayList<String>();
+  private final Map<String, TransportOption> transportMetadata = new HashMap<String, TransportOption>();
+  private       TransportOption              selectedTransport;
+  private       boolean                      transportOverride = false;
 
   private CharacterCalculator characterCalculator = new CharacterCalculator();
   private DynamicTheme        dynamicTheme        = new DynamicTheme();
@@ -199,6 +215,7 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
     dynamicTheme.onResume(this);
     dynamicLanguage.onResume(this);
 
+    populateTransportOptions();
     initializeSecurity();
     initializeTitleBar();
     initializeEnabledCheck();
@@ -306,49 +323,6 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
     case R.id.menu_edit_group:                handleEditPushGroup();                             return true;
     case R.id.menu_leave:                     handleLeavePushGroup();                            return true;
     case android.R.id.home:                   handleReturnToConversationList();                  return true;
-    }
-
-    return false;
-  }
-
-  @Override
-  public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-    if (isEncryptedConversation && isSingleConversation()) {
-      SessionStore sessionStore      = new TextSecureSessionStore(this, masterSecret);
-      Recipient  primaryRecipient    = getRecipients() == null ? null : getRecipients().getPrimaryRecipient();
-      boolean    isPushDestination   = DirectoryHelper.isPushDestination(this, getRecipients());
-      boolean    isSecureDestination = isSingleConversation() && sessionStore.containsSession(primaryRecipient.getRecipientId(),
-                                                                                              PushAddress.DEFAULT_DEVICE_ID);
-
-      getMenuInflater().inflate(R.menu.conversation_button_context, menu);
-
-      if (attachmentManager.isAttachmentPresent()) {
-        menu.removeItem(R.id.menu_context_send_encrypted_sms);
-        menu.removeItem(R.id.menu_context_send_unencrypted_sms);
-      } else {
-        menu.removeItem(R.id.menu_context_send_encrypted_mms);
-        menu.removeItem(R.id.menu_context_send_unencrypted_mms);
-      }
-
-      if (!isPushDestination) {
-        menu.removeItem(R.id.menu_context_send_push);
-      }
-
-      if (!isSecureDestination) {
-        menu.removeItem(R.id.menu_context_send_encrypted_mms);
-        menu.removeItem(R.id.menu_context_send_encrypted_sms);
-      }
-    }
-  }
-
-  @Override
-  public boolean onContextItemSelected(android.view.MenuItem item) {
-    switch (item.getItemId()) {
-      case R.id.menu_context_send_push:            sendMessage(false, false); return true;
-      case R.id.menu_context_send_encrypted_mms:
-      case R.id.menu_context_send_encrypted_sms:   sendMessage(false, true);  return true;
-      case R.id.menu_context_send_unencrypted_mms:
-      case R.id.menu_context_send_unencrypted_sms: sendMessage(true, true);   return true;
     }
 
     return false;
@@ -587,6 +561,78 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
 
   ///// Initializers
 
+  private void populateTransportOptions() {
+    String[] entryArray = (attachmentManager.isAttachmentPresent() || !recipients.isSingleRecipient()) ?
+        getResources().getStringArray(R.array.transport_selection_entries_media)                       :
+        getResources().getStringArray(R.array.transport_selection_entries_text);
+
+    String[] composeHintArray = (attachmentManager.isAttachmentPresent() || !recipients.isSingleRecipient()) ?
+        getResources().getStringArray(R.array.transport_selection_entries_compose_media)                     :
+        getResources().getStringArray(R.array.transport_selection_entries_compose_text);
+
+    final String[] valuesArray = getResources().getStringArray(R.array.transport_selection_values);
+
+    final int[]        attrs             = new int[]{R.attr.conversation_transport_indicators};
+    final TypedArray   iconArray         = obtainStyledAttributes(attrs);
+    final int          iconArrayResource = iconArray.getResourceId(0, -1);
+    final TypedArray   icons             = getResources().obtainTypedArray(iconArrayResource);
+
+    enabledTransports.clear();
+    for (int i=0; i<valuesArray.length; i++) {
+      String key = valuesArray[i];
+      enabledTransports.add(key);
+      transportMetadata.put(key, new TransportOption(key, icons.getResourceId(i, -1), entryArray[i], composeHintArray[i]));
+    }
+
+    iconArray.recycle();
+    icons.recycle();
+  }
+
+  private void initializeTransportPopup() {
+    if (transportPopup == null) {
+      final View     selectionMenu = LayoutInflater.from(this).inflate(R.layout.transport_selection, null);
+      final ListView list          = (ListView) selectionMenu.findViewById(R.id.transport_selection_list);
+
+      final TransportOptionsAdapter adapter = new TransportOptionsAdapter(this, enabledTransports, transportMetadata);
+
+      list.setAdapter(adapter);
+      transportPopup = new PopupWindow(selectionMenu);
+      transportPopup.setFocusable(true);
+      transportPopup.setBackgroundDrawable(new BitmapDrawable(getResources(), ""));
+      transportPopup.setOutsideTouchable(true);
+      transportPopup.setWindowLayoutMode(0, LayoutParams.WRAP_CONTENT);
+      transportPopup.setWidth(getResources().getDimensionPixelSize(R.dimen.transport_selection_popup_width));
+      list.setOnItemClickListener(new OnItemClickListener() {
+        @Override
+        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+          transportOverride = true;
+          setTransport((TransportOption) adapter.getItem(position));
+          transportPopup.dismiss();
+        }
+      });
+    } else {
+      final ListView                list    = (ListView) transportPopup.getContentView().findViewById(R.id.transport_selection_list);
+      final TransportOptionsAdapter adapter = (TransportOptionsAdapter) list.getAdapter();
+      adapter.setEnabledTransports(enabledTransports);
+      adapter.notifyDataSetInvalidated();
+    }
+
+  }
+
+  private void setTransport(String transport) {
+    setTransport(transportMetadata.get(transport));
+  }
+
+  private void setTransport(TransportOption transport) {
+    selectedTransport = transport;
+
+    TypedArray drawables = obtainStyledAttributes(SEND_ATTRIBUTES);
+    Log.w(TAG, "setting transport to " + transport.text);
+    sendButton.setImageResource(transport.drawable);
+    setComposeHint(transport.composeHint);
+    drawables.recycle();
+  }
+
   private void initializeTitleBar() {
     String title    = null;
     String subtitle = null;
@@ -692,7 +738,6 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
   }
 
   private void initializeSecurity() {
-    TypedArray drawables           = obtainStyledAttributes(SEND_ATTRIBUTES);
     SessionStore sessionStore      = new TextSecureSessionStore(this, masterSecret);
     Recipient  primaryRecipient    = getRecipients() == null ? null : getRecipients().getPrimaryRecipient();
     boolean    isPushDestination   = DirectoryHelper.isPushDestination(this, getRecipients());
@@ -706,23 +751,20 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
       this.isEncryptedConversation = false;
       this.characterCalculator     = new CharacterCalculator();
     }
+    if (!isPushDestination  ) enabledTransports.remove("textsecure");
+    if (!isSecureDestination) enabledTransports.remove("secure_sms");
 
-    if (isPushDestination) {
-      sendButton.setImageDrawable(drawables.getDrawable(0));
-      setComposeHint(getString(R.string.conversation_activity__type_message_push));
-    } else if (isSecureDestination) {
-      sendButton.setImageDrawable(drawables.getDrawable(1));
-      setComposeHint(attachmentManager.isAttachmentPresent() ?
-                     getString(R.string.conversation_activity__type_message_mms_secure) :
-                     getString(R.string.conversation_activity__type_message_sms_secure));
+    if (transportOverride) {
+      setTransport(selectedTransport);
     } else {
-      sendButton.setImageDrawable(drawables.getDrawable(2));
-      setComposeHint((attachmentManager.isAttachmentPresent() || !recipients.isSingleRecipient()) ?
-                     getString(R.string.conversation_activity__type_message_mms_insecure) :
-                     getString(R.string.conversation_activity__type_message_sms_insecure));
+      if (isPushDestination) {
+        setTransport("textsecure");
+      } else if (isSecureDestination) {
+        setTransport("secure_sms");
+      } else {
+        setTransport("insecure_sms");
+      }
     }
-
-    drawables.recycle();
 
     calculateCharactersRemaining();
   }
@@ -789,7 +831,19 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
       }
     });
 
-    registerForContextMenu(sendButton);
+    sendButton.setOnLongClickListener(new OnLongClickListener() {
+      @Override
+      public boolean onLongClick(View v) {
+        if (isEncryptedConversation && isSingleConversation()) {
+          initializeTransportPopup();
+          transportPopup.showAsDropDown(sendButton,
+                                        getResources().getDimensionPixelOffset(R.dimen.transport_selection_popup_xoff),
+                                        getResources().getDimensionPixelOffset(R.dimen.transport_selection_popup_yoff));
+          return true;
+        }
+        return false;
+      }
+    });
   }
 
   private void initializeReceivers() {
@@ -1051,8 +1105,7 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
     fragment.scrollToBottom();
   }
 
-
-  private void sendMessage(boolean forcePlaintext, boolean forceSms) {
+  private void sendMessage() {
     try {
       final Recipients recipients = getRecipients();
 
@@ -1062,9 +1115,9 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
       if ((!recipients.isSingleRecipient() || recipients.isEmailRecipient()) && !isMmsEnabled) {
         handleManualMmsRequired();
       } else if (attachmentManager.isAttachmentPresent() || !recipients.isSingleRecipient() || recipients.isGroupRecipient() || recipients.isEmailRecipient()) {
-        sendMediaMessage(forcePlaintext, forceSms);
+        sendMediaMessage(selectedTransport.isForcedPlaintext(), selectedTransport.isForcedSms());
       } else {
-        sendTextMessage(forcePlaintext, forceSms);
+        sendTextMessage(selectedTransport.isForcedPlaintext(), selectedTransport.isForcedSms());
       }
     } catch (RecipientFormattingException ex) {
       Toast.makeText(ConversationActivity.this,
@@ -1077,6 +1130,7 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
       Log.w(TAG, ex);
     }
   }
+
 
   private void sendMediaMessage(boolean forcePlaintext, final boolean forceSms)
       throws InvalidMessageException
@@ -1166,7 +1220,7 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
   private class SendButtonListener implements OnClickListener, TextView.OnEditorActionListener {
     @Override
     public void onClick(View v) {
-      sendMessage(false, false);
+      sendMessage();
     }
 
     @Override
