@@ -43,6 +43,7 @@
         <item name="conversation_send_button_push">@drawable/ic_send_push</item>
         <item name="conversation_send_button_sms_secure">@drawable/ic_send_sms_secure</item>
         <item name="conversation_send_button_sms_insecure">@drawable/ic_send_sms_insecure</item>
+        <item name="conversation_transport_indicators">@array/transport_selection_icons_light</item>
         <item name="conversation_delivered_indicator">@drawable/ic_sms_mms_delivered_light</item>
         <item name="conversation_emoji_toggle">@drawable/ic_emoji_dark</item>
         <item name="conversation_keyboard_toggle">@drawable/ic_ime_dark</item>

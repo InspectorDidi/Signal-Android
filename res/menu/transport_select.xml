@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:title="SMS Insecure"
+          android:id="@+id/sms_insecure"
+          android:icon="@drawable/ic_transport_sms_holo_light" />
+
+    <item android:title="SMS Secure"
+          android:id="@+id/sms_secure"
+          android:icon="@drawable/ic_transport_sms_secure_holo_light" />
+
+
+    <item android:title="TextSecure"
+          android:id="@+id/textsecure_transport"
+          android:icon="@drawable/ic_transport_textsecure" />
+
+</menu>
