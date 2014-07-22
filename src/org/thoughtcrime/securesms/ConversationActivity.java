@@ -182,10 +182,10 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
   private boolean    isMmsEnabled = true;
   private boolean    isCharactersLeftViewEnabled;
 
-  private final List<String>                        enabledTransports = new ArrayList<String>();
+  private final List<String>                 enabledTransports = new ArrayList<String>();
   private final Map<String, TransportOption> transportMetadata = new HashMap<String, TransportOption>();
-  private       String                              selectedTransport;
-  private       boolean                             transportOverride = false;
+  private       String                       selectedTransport;
+  private       boolean                      transportOverride = false;
 
   private CharacterCalculator characterCalculator = new CharacterCalculator();
   private DynamicTheme        dynamicTheme        = new DynamicTheme();
@@ -603,7 +603,7 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
       final View     selectionMenu = LayoutInflater.from(this).inflate(R.layout.transport_selection, null);
       final ListView list          = (ListView) selectionMenu.findViewById(R.id.transport_selection_list);
 
-      final TransportOptionListAdapter adapter = new TransportOptionListAdapter(this, transportMetadata);
+      final TransportOptionListAdapter adapter = new TransportOptionListAdapter(this, enabledTransports, transportMetadata);
 
       list.setAdapter(adapter);
       transportPopup = new PopupWindow(selectionMenu);
@@ -620,13 +620,12 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
           transportPopup.dismiss();
         }
       });
+    } else {
+      final ListView list = (ListView) transportPopup.getContentView().findViewById(R.id.transport_selection_list);
+      final TransportOptionListAdapter adapter = (TransportOptionListAdapter) list.getAdapter();
+      adapter.setEnabledTransports(enabledTransports);
+      adapter.notifyDataSetInvalidated();
     }
-
-    final ListView list = (ListView)transportPopup.getContentView().findViewById(R.id.transport_selection_list);
-    final TransportOptionListAdapter adapter = (TransportOptionListAdapter)list.getAdapter();
-    adapter.setEnabledTransports(enabledTransports);
-    adapter.notifyDataSetInvalidated();
-
     iconArray.recycle();
     icons.recycle();
   }

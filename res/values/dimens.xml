@@ -2,7 +2,7 @@
 <resources>
     <dimen name="emoji_drawer_size">40dip</dimen>
     <dimen name="transport_selection_popup_width">200sp</dimen>
-    <dimen name="transport_selection_popup_xoff">3dp</dimen>
+    <dimen name="transport_selection_popup_xoff">0dp</dimen>
     <dimen name="transport_selection_popup_yoff">1dp</dimen>
     <dimen name="conversation_item_corner_radius">3dp</dimen>
     <dimen name="conversation_item_drop_shadow_dist">2dp</dimen>
