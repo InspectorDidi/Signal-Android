@@ -572,7 +572,11 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
   ///// Initializers
 
   private void initializeTransportSelection() {
-    final List<String> entries           = new ArrayList<String>(Arrays.asList(getResources().getStringArray(R.array.transport_selection_entries)));
+    String[] entryArray = (attachmentManager.isAttachmentPresent() || !recipients.isSingleRecipient()) ?
+        getResources().getStringArray(R.array.transport_selection_entries_media)                       :
+        getResources().getStringArray(R.array.transport_selection_entries_text);
+
+    final List<String> entries = new ArrayList<String>(Arrays.asList(entryArray));
     final List<String> values            = new ArrayList<String>(Arrays.asList(getResources().getStringArray(R.array.transport_selection_values )));
     final int[]        attrs             = new int[]{R.attr.conversation_transport_indicators};
     final TypedArray   iconArray         = obtainStyledAttributes(attrs);
@@ -599,9 +603,11 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
     }
 
     if (transportPopup == null) {
-      final View selectionMenu = LayoutInflater.from(this).inflate(R.layout.transport_selection, null);
-      final ListView list = (ListView)selectionMenu.findViewById(R.id.transport_selection_list);
+      final View     selectionMenu = LayoutInflater.from(this).inflate(R.layout.transport_selection, null);
+      final ListView list          = (ListView) selectionMenu.findViewById(R.id.transport_selection_list);
+
       final TransportSelectionListAdapter adapter = new TransportSelectionListAdapter(this, transportMetadata);
+
       list.setAdapter(adapter);
       transportPopup = new PopupWindow(selectionMenu);
       transportPopup.setFocusable(true);
@@ -779,6 +785,8 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
       } else {
         setTransport("insecure_sms");
       }
+    } else {
+      setTransport(selectedTransport);
     }
 
     calculateCharactersRemaining();

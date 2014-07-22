@@ -92,7 +92,9 @@
     <string name="ConversationActivity_leave_group">Leave group?</string>
     <string name="ConversationActivity_are_you_sure_you_want_to_leave_this_group">Are you sure you want to leave this group?</string>
     <string name="ConversationActivity_transport_insecure_sms">Insecure SMS</string>
+    <string name="ConversationActivity_transport_insecure_mms">Insecure MMS</string>
     <string name="ConversationActivity_transport_secure_sms">Secure SMS</string>
+    <string name="ConversationActivity_transport_secure_mms">Secure MMS</string>
     <string name="ConversationActivity_transport_textsecure">TextSecure</string>
 
     <!-- ConversationFragment -->

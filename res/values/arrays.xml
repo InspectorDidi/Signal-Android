@@ -145,9 +145,15 @@
     <item>@drawable/my_identity_dark</item>
   </string-array>
 
-  <string-array name="transport_selection_entries">
+  <string-array name="transport_selection_entries_text">
     <item>@string/ConversationActivity_transport_insecure_sms</item>
     <item>@string/ConversationActivity_transport_secure_sms</item>
+    <item>@string/ConversationActivity_transport_textsecure</item>
+  </string-array>
+
+  <string-array name="transport_selection_entries_media">
+    <item>@string/ConversationActivity_transport_insecure_mms</item>
+    <item>@string/ConversationActivity_transport_secure_mms</item>
     <item>@string/ConversationActivity_transport_textsecure</item>
   </string-array>
 
