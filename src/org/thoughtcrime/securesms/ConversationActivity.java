@@ -40,7 +40,6 @@ import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.style.RelativeSizeSpan;
 import android.util.Log;
-import android.view.ContextMenu;
 import android.view.ContextThemeWrapper;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -69,7 +68,6 @@ import com.google.protobuf.ByteString;
 import org.thoughtcrime.securesms.TransportSelectionListAdapter.TransportSelectionItem;
 import org.thoughtcrime.securesms.components.EmojiDrawer;
 import org.thoughtcrime.securesms.components.EmojiToggle;
-import org.thoughtcrime.securesms.components.ImageDivet;
 import org.thoughtcrime.securesms.contacts.ContactAccessor;
 import org.thoughtcrime.securesms.contacts.ContactAccessor.ContactData;
 import org.thoughtcrime.securesms.crypto.KeyExchangeInitiator;
@@ -166,7 +164,6 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
                                                          R.attr.conversation_send_button_sms_insecure};
 
   private MasterSecret masterSecret;
-  private LinearLayout container;
   private EditText     composeText;
   private ImageButton  sendButton;
   private TextView     charactersLeft;
@@ -397,17 +394,18 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
       @Override
       public void onClick(DialogInterface dialog, int which) {
         if (isSingleConversation()) {
-          ConversationActivity self = ConversationActivity.this;
-          Recipient recipient = getRecipients().getPrimaryRecipient();
+          ConversationActivity self      = ConversationActivity.this;
+          Recipient            recipient = getRecipients().getPrimaryRecipient();
 
           if (SessionRecordV2.hasSession(self, masterSecret,
-              recipient.getRecipientId(),
-              RecipientDevice.DEFAULT_DEVICE_ID)) {
+                                         recipient.getRecipientId(),
+                                         RecipientDevice.DEFAULT_DEVICE_ID))
+          {
             OutgoingEndSessionMessage endSessionMessage =
                 new OutgoingEndSessionMessage(new OutgoingTextMessage(getRecipients(), "TERMINATE"));
 
             long allocatedThreadId = MessageSender.send(self, masterSecret,
-                endSessionMessage, threadId, false);
+                                                        endSessionMessage, threadId, false);
 
             sendComplete(recipients, allocatedThreadId, allocatedThreadId != self.threadId);
           } else {
@@ -777,7 +775,9 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
 
     initializeTransportSelection();
 
-    if (!transportOverride) {
+    if (transportOverride) {
+      setTransport(selectedTransport);
+    } else {
       if (isPushDestination) {
         setTransport("textsecure");
       } else if (isSecureDestination) {
@@ -785,8 +785,6 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
       } else {
         setTransport("insecure_sms");
       }
-    } else {
-      setTransport(selectedTransport);
     }
 
     calculateCharactersRemaining();
@@ -820,7 +818,6 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
     threadId            = getIntent().getLongExtra(THREAD_ID_EXTRA, -1);
     distributionType    = getIntent().getIntExtra(DISTRIBUTION_TYPE_EXTRA,
                                                   ThreadDatabase.DistributionTypes.DEFAULT);
-    container           = (LinearLayout)findViewById(R.id.container);
     sendButton          = (ImageButton)findViewById(R.id.send_button);
     composeText         = (EditText)findViewById(R.id.embedded_text_editor);
     masterSecret        = getIntent().getParcelableExtra(MASTER_SECRET_EXTRA);
@@ -854,14 +851,13 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
       }
     });
 
-//    registerForContextMenu(sendButton);
     sendButton.setOnLongClickListener(new OnLongClickListener() {
       @Override
       public boolean onLongClick(View v) {
         if (isEncryptedConversation && isSingleConversation()) {
           transportPopup.showAsDropDown(sendButton,
-              getResources().getDimensionPixelOffset(R.dimen.transport_selection_popup_xoff),
-              getResources().getDimensionPixelOffset(R.dimen.transport_selection_popup_yoff));
+                                        getResources().getDimensionPixelOffset(R.dimen.transport_selection_popup_xoff),
+                                        getResources().getDimensionPixelOffset(R.dimen.transport_selection_popup_yoff));
           return true;
         }
         return false;

@@ -2,7 +2,6 @@ package org.thoughtcrime.securesms.util;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
@@ -149,12 +148,7 @@ public class Emoji {
 
   private String[] initializeEmojiAssets() {
     try {
-      AssetManager assets = context.getAssets();
-      if (assets != null) {
-        return assets.list("emoji");
-      } else {
-        return new String[0];
-      }
+      return context.getAssets().list("emoji");
     } catch (IOException e) {
       Log.w("Emoji", e);
       return new String[0];

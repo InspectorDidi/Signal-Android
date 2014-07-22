@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="emoji_drawer_size">40dip</dimen>
-    <dimen name="transport_selection_popup_width">200dip</dimen>
+    <dimen name="transport_selection_popup_width">200sp</dimen>
     <dimen name="transport_selection_popup_xoff">3dp</dimen>
     <dimen name="transport_selection_popup_yoff">1dp</dimen>
     <dimen name="conversation_item_corner_radius">3dp</dimen>
