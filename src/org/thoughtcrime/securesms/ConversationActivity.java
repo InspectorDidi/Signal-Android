@@ -614,7 +614,6 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
           transportOverride = true;
           setTransport((TransportSelectionItem) adapter.getItem(position));
-          sendMessage();
           transportPopup.dismiss();
         }
       });
