@@ -11,15 +11,15 @@ import android.widget.TextView;
 import java.util.List;
 import java.util.Map;
 
-public class TransportOptionListAdapter extends BaseAdapter {
+public class TransportOptionsAdapter extends BaseAdapter {
   private final Context                             context;
   private final LayoutInflater                      inflater;
   private       List<String>                        enabledTransports;
   private final Map<String, TransportOption> transportMetadata;
 
-  public TransportOptionListAdapter(final Context context,
-                                    final List<String> enabledTransports,
-                                    final Map<String, TransportOption> transportMetadata) {
+  public TransportOptionsAdapter(final Context context,
+                                 final List<String> enabledTransports,
+                                 final Map<String, TransportOption> transportMetadata) {
     super();
     this.context    = context;
     this.inflater   = LayoutInflater.from(context);
@@ -27,8 +27,8 @@ public class TransportOptionListAdapter extends BaseAdapter {
     this.transportMetadata = transportMetadata;
   }
 
-  public TransportOptionListAdapter(final Context context,
-                                    final Map<String, TransportOption> transportMetadata) {
+  public TransportOptionsAdapter(final Context context,
+                                 final Map<String, TransportOption> transportMetadata) {
     this(context, null, transportMetadata);
   }
 

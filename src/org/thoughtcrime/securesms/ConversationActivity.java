@@ -64,7 +64,7 @@ import com.actionbarsherlock.view.MenuInflater;
 import com.actionbarsherlock.view.MenuItem;
 import com.google.protobuf.ByteString;
 
-import org.thoughtcrime.securesms.TransportOptionListAdapter.TransportOption;
+import org.thoughtcrime.securesms.TransportOptionsAdapter.TransportOption;
 import org.thoughtcrime.securesms.components.EmojiDrawer;
 import org.thoughtcrime.securesms.components.EmojiToggle;
 import org.thoughtcrime.securesms.contacts.ContactAccessor;
@@ -603,7 +603,7 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
       final View     selectionMenu = LayoutInflater.from(this).inflate(R.layout.transport_selection, null);
       final ListView list          = (ListView) selectionMenu.findViewById(R.id.transport_selection_list);
 
-      final TransportOptionListAdapter adapter = new TransportOptionListAdapter(this, enabledTransports, transportMetadata);
+      final TransportOptionsAdapter adapter = new TransportOptionsAdapter(this, enabledTransports, transportMetadata);
 
       list.setAdapter(adapter);
       transportPopup = new PopupWindow(selectionMenu);
@@ -621,8 +621,8 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
         }
       });
     } else {
-      final ListView list = (ListView) transportPopup.getContentView().findViewById(R.id.transport_selection_list);
-      final TransportOptionListAdapter adapter = (TransportOptionListAdapter) list.getAdapter();
+      final ListView                list    = (ListView) transportPopup.getContentView().findViewById(R.id.transport_selection_list);
+      final TransportOptionsAdapter adapter = (TransportOptionsAdapter) list.getAdapter();
       adapter.setEnabledTransports(enabledTransports);
       adapter.notifyDataSetInvalidated();
     }
