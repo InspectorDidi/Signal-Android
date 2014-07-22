@@ -54,7 +54,6 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.PopupWindow;
 import android.widget.TextView;
@@ -65,7 +64,7 @@ import com.actionbarsherlock.view.MenuInflater;
 import com.actionbarsherlock.view.MenuItem;
 import com.google.protobuf.ByteString;
 
-import org.thoughtcrime.securesms.TransportSelectionListAdapter.TransportSelectionItem;
+import org.thoughtcrime.securesms.TransportOptionListAdapter.TransportOption;
 import org.thoughtcrime.securesms.components.EmojiDrawer;
 import org.thoughtcrime.securesms.components.EmojiToggle;
 import org.thoughtcrime.securesms.contacts.ContactAccessor;
@@ -184,7 +183,7 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
   private boolean    isCharactersLeftViewEnabled;
 
   private final List<String>                        enabledTransports = new ArrayList<String>();
-  private final Map<String, TransportSelectionItem> transportMetadata = new HashMap<String, TransportSelectionItem>();
+  private final Map<String, TransportOption> transportMetadata = new HashMap<String, TransportOption>();
   private       String                              selectedTransport;
   private       boolean                             transportOverride = false;
 
@@ -569,13 +568,13 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
 
   ///// Initializers
 
-  private void initializeTransportSelection() {
+  private void initializeTransportOptions() {
     String[] entryArray = (attachmentManager.isAttachmentPresent() || !recipients.isSingleRecipient()) ?
         getResources().getStringArray(R.array.transport_selection_entries_media)                       :
         getResources().getStringArray(R.array.transport_selection_entries_text);
 
-    final List<String> entries = new ArrayList<String>(Arrays.asList(entryArray));
-    final List<String> values            = new ArrayList<String>(Arrays.asList(getResources().getStringArray(R.array.transport_selection_values )));
+    final List<String> entries           = new ArrayList<String>(Arrays.asList(entryArray));
+    final List<String> values            = new ArrayList<String>(Arrays.asList(getResources().getStringArray(R.array.transport_selection_values)));
     final int[]        attrs             = new int[]{R.attr.conversation_transport_indicators};
     final TypedArray   iconArray         = obtainStyledAttributes(attrs);
     final int          iconArrayResource = iconArray.getResourceId(0, -1);
@@ -585,7 +584,7 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
     for (int i=0; i<values.size(); i++) {
       String key = values.get(i);
       enabledTransports.add(key);
-      transportMetadata.put(key, new TransportSelectionItem(key, icons.getResourceId(i, -1), entries.get(i)));
+      transportMetadata.put(key, new TransportOption(key, icons.getResourceId(i, -1), entries.get(i)));
     }
 
     boolean   isPushDestination = DirectoryHelper.isPushDestination(this, getRecipients());
@@ -604,7 +603,7 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
       final View     selectionMenu = LayoutInflater.from(this).inflate(R.layout.transport_selection, null);
       final ListView list          = (ListView) selectionMenu.findViewById(R.id.transport_selection_list);
 
-      final TransportSelectionListAdapter adapter = new TransportSelectionListAdapter(this, transportMetadata);
+      final TransportOptionListAdapter adapter = new TransportOptionListAdapter(this, transportMetadata);
 
       list.setAdapter(adapter);
       transportPopup = new PopupWindow(selectionMenu);
@@ -617,14 +616,14 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
           transportOverride = true;
-          setTransport((TransportSelectionItem) adapter.getItem(position));
+          setTransport((TransportOption) adapter.getItem(position));
           transportPopup.dismiss();
         }
       });
     }
 
     final ListView list = (ListView)transportPopup.getContentView().findViewById(R.id.transport_selection_list);
-    final TransportSelectionListAdapter adapter = (TransportSelectionListAdapter)list.getAdapter();
+    final TransportOptionListAdapter adapter = (TransportOptionListAdapter)list.getAdapter();
     adapter.setEnabledTransports(enabledTransports);
     adapter.notifyDataSetInvalidated();
 
@@ -636,7 +635,7 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
     setTransport(transportMetadata.get(transport));
   }
 
-  private void setTransport(TransportSelectionItem transport) {
+  private void setTransport(TransportOption transport) {
     selectedTransport = transport.key;
 
     TypedArray drawables = obtainStyledAttributes(SEND_ATTRIBUTES);
@@ -773,7 +772,7 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
       this.characterCalculator     = new CharacterCalculator();
     }
 
-    initializeTransportSelection();
+    initializeTransportOptions();
 
     if (transportOverride) {
       setTransport(selectedTransport);

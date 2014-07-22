@@ -4,27 +4,22 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
-import android.widget.SimpleAdapter;
 import android.widget.TextView;
 
-import org.thoughtcrime.securesms.TransportSelectionListAdapter.TransportSelectionItem;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class TransportSelectionListAdapter extends BaseAdapter {
+public class TransportOptionListAdapter extends BaseAdapter {
   private final Context                             context;
   private final LayoutInflater                      inflater;
   private       List<String>                        enabledTransports;
-  private final Map<String, TransportSelectionItem> transportMetadata;
+  private final Map<String, TransportOption> transportMetadata;
 
-  public TransportSelectionListAdapter(final Context context,
-                                       final List<String> enabledTransports,
-                                       final Map<String, TransportSelectionItem> transportMetadata) {
+  public TransportOptionListAdapter(final Context context,
+                                    final List<String> enabledTransports,
+                                    final Map<String, TransportOption> transportMetadata) {
     super();
     this.context    = context;
     this.inflater   = LayoutInflater.from(context);
@@ -32,8 +27,8 @@ public class TransportSelectionListAdapter extends BaseAdapter {
     this.transportMetadata = transportMetadata;
   }
 
-  public TransportSelectionListAdapter(final Context context,
-                                       final Map<String, TransportSelectionItem> transportMetadata) {
+  public TransportOptionListAdapter(final Context context,
+                                    final Map<String, TransportOption> transportMetadata) {
     this(context, null, transportMetadata);
   }
 
@@ -41,12 +36,12 @@ public class TransportSelectionListAdapter extends BaseAdapter {
     this.enabledTransports = enabledTransports;
   }
 
-  public static class TransportSelectionItem {
+  public static class TransportOption {
     int drawable;
     String text;
     String key;
 
-    public TransportSelectionItem(String key, int drawable, String text) {
+    public TransportOption(String key, int drawable, String text) {
       this.key = key;
       this.drawable = drawable;
       this.text = text;
@@ -77,7 +72,7 @@ public class TransportSelectionListAdapter extends BaseAdapter {
       view = convertView;
     }
 
-    TransportSelectionItem transport = (TransportSelectionItem) getItem(position);
+    TransportOption transport = (TransportOption) getItem(position);
 
     final ImageView imageView = (ImageView)view.findViewById(R.id.icon);
     final TextView  textView  = (TextView) view.findViewById(R.id.text);
