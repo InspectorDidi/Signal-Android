@@ -637,8 +637,10 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
 
       @Override
       protected void onPostExecute(String currentTransportPreference) {
-        transportOverride = true;
-        setTransport(currentTransportPreference);
+        if(currentTransportPreference != null && values.contains(currentTransportPreference)) {
+          transportOverride = true;
+          setTransport(currentTransportPreference);
+        }
       }
     }.execute();
 
