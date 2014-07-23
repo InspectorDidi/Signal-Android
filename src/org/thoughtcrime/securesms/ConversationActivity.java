@@ -616,7 +616,9 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
           transportOverride = true;
-          setTransport((TransportOption) adapter.getItem(position));
+          TransportOption option = (TransportOption) adapter.getItem(position);
+          DatabaseFactory.getThreadDatabase(ConversationActivity.this).setTransportPreference(threadId, option.key);
+          setTransport(option);
           transportPopup.dismiss();
         }
       });
@@ -626,6 +628,20 @@ public class ConversationActivity extends PassphraseRequiredSherlockFragmentActi
       adapter.setEnabledTransports(enabledTransports);
       adapter.notifyDataSetInvalidated();
     }
+
+    new AsyncTask<Void, Void, String>() {
+      @Override
+      protected String doInBackground(Void... params) {
+        return DatabaseFactory.getThreadDatabase(ConversationActivity.this).getTransportPreference(threadId);
+      }
+
+      @Override
+      protected void onPostExecute(String currentTransportPreference) {
+        transportOverride = true;
+        setTransport(currentTransportPreference);
+      }
+    }.execute();
+
     iconArray.recycle();
     icons.recycle();
   }

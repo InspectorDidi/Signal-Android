@@ -52,12 +52,13 @@ public class ThreadDatabase extends Database {
   private static final String ERROR           = "error";
   private static final String HAS_ATTACHMENT  = "has_attachment";
   public  static final String SNIPPET_TYPE    = "snippet_type";
+  public  static final String TRANSPORT_PREF  = "transport_pref";
 
   public static final String CREATE_TABLE = "CREATE TABLE " + TABLE_NAME + " (" + ID + " INTEGER PRIMARY KEY, "                             +
     DATE + " INTEGER DEFAULT 0, " + MESSAGE_COUNT + " INTEGER DEFAULT 0, "                         +
     RECIPIENT_IDS + " TEXT, " + SNIPPET + " TEXT, " + SNIPPET_CHARSET + " INTEGER DEFAULT 0, "     +
     READ + " INTEGER DEFAULT 1, " + TYPE + " INTEGER DEFAULT 0, " + ERROR + " INTEGER DEFAULT 0, " +
-    SNIPPET_TYPE + " INTEGER DEFAULT 0);";
+    SNIPPET_TYPE + " INTEGER DEFAULT 0, " + TRANSPORT_PREF + " TEXT);";
 
   public static final String[] CREATE_INDEXS = {
     "CREATE INDEX IF NOT EXISTS thread_recipient_ids_index ON " + TABLE_NAME + " (" + RECIPIENT_IDS + ");",
@@ -233,6 +234,33 @@ public class ThreadDatabase extends Database {
     SQLiteDatabase db = databaseHelper.getWritableDatabase();
     db.update(TABLE_NAME, contentValues, ID_WHERE, new String[] {threadId+""});
     notifyConversationListListeners();
+  }
+
+  public void setTransportPreference(long threadId, String transport) {
+    ContentValues contentValues = new ContentValues(1);
+    contentValues.put(TRANSPORT_PREF, transport);
+
+    SQLiteDatabase db = databaseHelper.getWritableDatabase();
+    db.update(TABLE_NAME, contentValues, ID_WHERE, new String[] {threadId+""});
+    notifyConversationListListeners();
+  }
+
+  public String getTransportPreference(long threadId) {
+    SQLiteDatabase db = databaseHelper.getReadableDatabase();
+    Cursor cursor     = null;
+
+    try {
+      cursor = db.query(TABLE_NAME, null, ID + " = ?", new String[] {threadId+""}, null, null, null);
+
+      if (cursor != null && cursor.moveToFirst()) {
+        return cursor.getString(cursor.getColumnIndexOrThrow(TRANSPORT_PREF));
+      }
+    } finally {
+      if (cursor != null)
+        cursor.close();
+    }
+
+    return null;
   }
 
   public void setDistributionType(long threadId, int distributionType) {
