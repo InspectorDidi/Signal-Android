@@ -23,7 +23,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
@@ -34,38 +33,28 @@ import android.provider.ContactsContract;
 import android.telephony.PhoneNumberUtils;
 import android.text.Editable;
 import android.text.InputType;
-import android.text.Spannable;
-import android.text.SpannableString;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.text.style.RelativeSizeSpan;
 import android.util.Log;
 import android.view.ContextThemeWrapper;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnFocusChangeListener;
 import android.view.View.OnKeyListener;
 import android.view.View.OnLongClickListener;
-import android.view.WindowManager.LayoutParams;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.ListView;
-import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.protobuf.ByteString;
 
-import org.thoughtcrime.securesms.TransportOptionsAdapter.TransportOption;
 import org.thoughtcrime.securesms.components.EmojiDrawer;
 import org.thoughtcrime.securesms.components.EmojiToggle;
 import org.thoughtcrime.securesms.contacts.ContactAccessor;
@@ -118,11 +107,8 @@ import org.whispersystems.libaxolotl.state.SessionStore;
 import org.whispersystems.textsecure.api.push.PushAddress;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 import static org.thoughtcrime.securesms.database.GroupDatabase.GroupRecord;
 import static org.thoughtcrime.securesms.recipients.Recipient.RecipientModifiedListener;
@@ -156,15 +142,10 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
   private static final int PICK_CONTACT_INFO = 4;
   private static final int GROUP_EDIT        = 5;
 
-  private static final int SEND_ATTRIBUTES[] = new int[]{R.attr.conversation_send_button_push,
-                                                         R.attr.conversation_send_button_sms_secure,
-                                                         R.attr.conversation_send_button_sms_insecure};
-
   private MasterSecret masterSecret;
   private EditText     composeText;
   private ImageButton  sendButton;
   private TextView     charactersLeft;
-  private PopupWindow  transportPopup;
 
   private AttachmentTypeSelectorAdapter attachmentAdapter;
   private AttachmentManager             attachmentManager;
@@ -172,6 +153,7 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
   private BroadcastReceiver             groupUpdateReceiver;
   private EmojiDrawer                   emojiDrawer;
   private EmojiToggle                   emojiToggle;
+  private TransportOptions              transportOptions;
 
   private Recipients recipients;
   private long       threadId;
@@ -179,11 +161,6 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
   private boolean    isEncryptedConversation;
   private boolean    isMmsEnabled = true;
   private boolean    isCharactersLeftViewEnabled;
-
-  private final List<String>                 enabledTransports = new ArrayList<String>();
-  private final Map<String, TransportOption> transportMetadata = new HashMap<String, TransportOption>();
-  private       TransportOption              selectedTransport;
-  private       boolean                      transportOverride = false;
 
   private CharacterCalculator characterCalculator = new CharacterCalculator();
   private DynamicTheme        dynamicTheme        = new DynamicTheme();
@@ -215,7 +192,6 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
     dynamicTheme.onResume(this);
     dynamicLanguage.onResume(this);
 
-    populateTransportOptions();
     initializeSecurity();
     initializeTitleBar();
     initializeEnabledCheck();
@@ -561,78 +537,6 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
 
   ///// Initializers
 
-  private void populateTransportOptions() {
-    String[] entryArray = (attachmentManager.isAttachmentPresent() || !recipients.isSingleRecipient()) ?
-        getResources().getStringArray(R.array.transport_selection_entries_media)                       :
-        getResources().getStringArray(R.array.transport_selection_entries_text);
-
-    String[] composeHintArray = (attachmentManager.isAttachmentPresent() || !recipients.isSingleRecipient()) ?
-        getResources().getStringArray(R.array.transport_selection_entries_compose_media)                     :
-        getResources().getStringArray(R.array.transport_selection_entries_compose_text);
-
-    final String[] valuesArray = getResources().getStringArray(R.array.transport_selection_values);
-
-    final int[]        attrs             = new int[]{R.attr.conversation_transport_indicators};
-    final TypedArray   iconArray         = obtainStyledAttributes(attrs);
-    final int          iconArrayResource = iconArray.getResourceId(0, -1);
-    final TypedArray   icons             = getResources().obtainTypedArray(iconArrayResource);
-
-    enabledTransports.clear();
-    for (int i=0; i<valuesArray.length; i++) {
-      String key = valuesArray[i];
-      enabledTransports.add(key);
-      transportMetadata.put(key, new TransportOption(key, icons.getResourceId(i, -1), entryArray[i], composeHintArray[i]));
-    }
-
-    iconArray.recycle();
-    icons.recycle();
-  }
-
-  private void initializeTransportPopup() {
-    if (transportPopup == null) {
-      final View     selectionMenu = LayoutInflater.from(this).inflate(R.layout.transport_selection, null);
-      final ListView list          = (ListView) selectionMenu.findViewById(R.id.transport_selection_list);
-
-      final TransportOptionsAdapter adapter = new TransportOptionsAdapter(this, enabledTransports, transportMetadata);
-
-      list.setAdapter(adapter);
-      transportPopup = new PopupWindow(selectionMenu);
-      transportPopup.setFocusable(true);
-      transportPopup.setBackgroundDrawable(new BitmapDrawable(getResources(), ""));
-      transportPopup.setOutsideTouchable(true);
-      transportPopup.setWindowLayoutMode(0, LayoutParams.WRAP_CONTENT);
-      transportPopup.setWidth(getResources().getDimensionPixelSize(R.dimen.transport_selection_popup_width));
-      list.setOnItemClickListener(new OnItemClickListener() {
-        @Override
-        public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-          transportOverride = true;
-          setTransport((TransportOption) adapter.getItem(position));
-          transportPopup.dismiss();
-        }
-      });
-    } else {
-      final ListView                list    = (ListView) transportPopup.getContentView().findViewById(R.id.transport_selection_list);
-      final TransportOptionsAdapter adapter = (TransportOptionsAdapter) list.getAdapter();
-      adapter.setEnabledTransports(enabledTransports);
-      adapter.notifyDataSetInvalidated();
-    }
-
-  }
-
-  private void setTransport(String transport) {
-    setTransport(transportMetadata.get(transport));
-  }
-
-  private void setTransport(TransportOption transport) {
-    selectedTransport = transport;
-
-    TypedArray drawables = obtainStyledAttributes(SEND_ATTRIBUTES);
-    Log.w(TAG, "setting transport to " + transport.text);
-    sendButton.setImageResource(transport.drawable);
-    setComposeHint(transport.composeHint);
-    drawables.recycle();
-  }
-
   private void initializeTitleBar() {
     String title    = null;
     String subtitle = null;
@@ -751,24 +655,21 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
       this.isEncryptedConversation = false;
       this.characterCalculator     = new CharacterCalculator();
     }
-    if (!isPushDestination  ) enabledTransports.remove("textsecure");
-    if (!isSecureDestination) enabledTransports.remove("secure_sms");
 
-    if (transportOverride) {
-      setTransport(selectedTransport);
+    transportOptions.initializeAvailableTransports(!recipients.isSingleRecipient() || attachmentManager.isAttachmentPresent());
+    if (!isPushDestination  ) transportOptions.disableTransport("textsecure");
+    if (!isSecureDestination) transportOptions.disableTransport("secure_sms");
+
+    if (isPushDestination) {
+      transportOptions.setDefaultTransport("textsecure");
+    } else if (isSecureDestination) {
+      transportOptions.setDefaultTransport("secure_sms");
     } else {
-      if (isPushDestination) {
-        setTransport("textsecure");
-      } else if (isSecureDestination) {
-        setTransport("secure_sms");
-      } else {
-        setTransport("insecure_sms");
-      }
+      transportOptions.setDefaultTransport("insecure_sms");
     }
 
     calculateCharactersRemaining();
   }
-
 
   private void initializeMmsEnabledCheck() {
     new AsyncTask<Void, Void, Boolean>() {
@@ -831,14 +732,12 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
       }
     });
 
+    transportOptions = new TransportOptions(this, sendButton, composeText);
     sendButton.setOnLongClickListener(new OnLongClickListener() {
       @Override
       public boolean onLongClick(View v) {
         if (isEncryptedConversation && isSingleConversation()) {
-          initializeTransportPopup();
-          transportPopup.showAsDropDown(sendButton,
-                                        getResources().getDimensionPixelOffset(R.dimen.transport_selection_popup_xoff),
-                                        getResources().getDimensionPixelOffset(R.dimen.transport_selection_popup_yoff));
+          transportOptions.showPopup(sendButton);
           return true;
         }
         return false;
@@ -1026,10 +925,6 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
     charactersLeft.setText(characterState.charactersRemaining + "/" + characterState.maxMessageSize + " (" + characterState.messagesSpent + ")");
   }
 
-  private boolean isExistingConversation() {
-    return this.recipients != null && this.threadId != -1;
-  }
-
   private boolean isSingleConversation() {
     return getRecipients() != null && getRecipients().isSingleRecipient() && !getRecipients().isGroupRecipient();
   }
@@ -1115,9 +1010,9 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
       if ((!recipients.isSingleRecipient() || recipients.isEmailRecipient()) && !isMmsEnabled) {
         handleManualMmsRequired();
       } else if (attachmentManager.isAttachmentPresent() || !recipients.isSingleRecipient() || recipients.isGroupRecipient() || recipients.isEmailRecipient()) {
-        sendMediaMessage(selectedTransport.isForcedPlaintext(), selectedTransport.isForcedSms());
+        sendMediaMessage(transportOptions.getSelectedTransport().isForcedPlaintext(), transportOptions.getSelectedTransport().isForcedSms());
       } else {
-        sendTextMessage(selectedTransport.isForcedPlaintext(), selectedTransport.isForcedSms());
+        sendTextMessage(transportOptions.getSelectedTransport().isForcedPlaintext(), transportOptions.getSelectedTransport().isForcedSms());
       }
     } catch (RecipientFormattingException ex) {
       Toast.makeText(ConversationActivity.this,
@@ -1276,17 +1171,6 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
   @Override
   public void setComposeText(String text) {
     this.composeText.setText(text);
-  }
-
-  private void setComposeHint(String hint){
-    if (hint == null) {
-      this.composeText.setHint(null);
-    } else {
-      SpannableString span = new SpannableString(hint);
-      span.setSpan(new RelativeSizeSpan(0.8f), 0, hint.length(), Spannable.SPAN_INCLUSIVE_INCLUSIVE);
-      this.composeText.setHint(span);
-      this.sendButton.setContentDescription(hint);
-    }
   }
 
   @Override
