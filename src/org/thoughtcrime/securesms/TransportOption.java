@@ -1,10 +1,10 @@
 package org.thoughtcrime.securesms;
 
 public class TransportOption {
-  int    drawable;
-  String text;
-  String key;
-  String composeHint;
+  public int    drawable;
+  public String text;
+  public String key;
+  public String composeHint;
 
   public TransportOption(String key, int drawable, String text, String composeHint) {
     this.key         = key;

@@ -45,11 +45,9 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnFocusChangeListener;
 import android.view.View.OnKeyListener;
-import android.view.View.OnLongClickListener;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -57,6 +55,7 @@ import com.google.protobuf.ByteString;
 
 import org.thoughtcrime.securesms.components.EmojiDrawer;
 import org.thoughtcrime.securesms.components.EmojiToggle;
+import org.thoughtcrime.securesms.components.SendButton;
 import org.thoughtcrime.securesms.contacts.ContactAccessor;
 import org.thoughtcrime.securesms.contacts.ContactAccessor.ContactData;
 import org.thoughtcrime.securesms.crypto.KeyExchangeInitiator;
@@ -144,7 +143,7 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
 
   private MasterSecret masterSecret;
   private EditText     composeText;
-  private ImageButton  sendButton;
+  private SendButton   sendButton;
   private TextView     charactersLeft;
 
   private AttachmentTypeSelectorAdapter attachmentAdapter;
@@ -153,7 +152,6 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
   private BroadcastReceiver             groupUpdateReceiver;
   private EmojiDrawer                   emojiDrawer;
   private EmojiToggle                   emojiToggle;
-  private TransportOptions              transportOptions;
 
   private Recipients recipients;
   private long       threadId;
@@ -656,16 +654,16 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
       this.characterCalculator     = new CharacterCalculator();
     }
 
-    transportOptions.initializeAvailableTransports(!recipients.isSingleRecipient() || attachmentManager.isAttachmentPresent());
-    if (!isPushDestination  ) transportOptions.disableTransport("textsecure");
-    if (!isSecureDestination) transportOptions.disableTransport("secure_sms");
+    sendButton.initializeAvailableTransports(!recipients.isSingleRecipient() || attachmentManager.isAttachmentPresent());
+    if (!isPushDestination  ) sendButton.disableTransport("textsecure");
+    if (!isSecureDestination) sendButton.disableTransport("secure_sms");
 
     if (isPushDestination) {
-      transportOptions.setDefaultTransport("textsecure");
+      sendButton.setDefaultTransport("textsecure");
     } else if (isSecureDestination) {
-      transportOptions.setDefaultTransport("secure_sms");
+      sendButton.setDefaultTransport("secure_sms");
     } else {
-      transportOptions.setDefaultTransport("insecure_sms");
+      sendButton.setDefaultTransport("insecure_sms");
     }
 
     calculateCharactersRemaining();
@@ -698,7 +696,7 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
     threadId            = getIntent().getLongExtra(THREAD_ID_EXTRA, -1);
     distributionType    = getIntent().getIntExtra(DISTRIBUTION_TYPE_EXTRA,
                                                   ThreadDatabase.DistributionTypes.DEFAULT);
-    sendButton          = (ImageButton)findViewById(R.id.send_button);
+    sendButton          = (SendButton)findViewById(R.id.send_button);
     composeText         = (EditText)findViewById(R.id.embedded_text_editor);
     masterSecret        = getIntent().getParcelableExtra(MASTER_SECRET_EXTRA);
     charactersLeft      = (TextView)findViewById(R.id.space_left);
@@ -717,6 +715,7 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
 
     sendButton.setOnClickListener(sendButtonListener);
     sendButton.setEnabled(true);
+    sendButton.setComposeTextView(composeText);
     composeText.setOnKeyListener(composeKeyPressedListener);
     composeText.addTextChangedListener(composeKeyPressedListener);
     composeText.setOnEditorActionListener(sendButtonListener);
@@ -729,18 +728,6 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
       @Override
       public void onModified(Recipient recipient) {
         initializeTitleBar();
-      }
-    });
-
-    transportOptions = new TransportOptions(this, sendButton, composeText);
-    sendButton.setOnLongClickListener(new OnLongClickListener() {
-      @Override
-      public boolean onLongClick(View v) {
-        if (isEncryptedConversation && isSingleConversation()) {
-          transportOptions.showPopup(sendButton);
-          return true;
-        }
-        return false;
       }
     });
   }
@@ -1010,9 +997,9 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
       if ((!recipients.isSingleRecipient() || recipients.isEmailRecipient()) && !isMmsEnabled) {
         handleManualMmsRequired();
       } else if (attachmentManager.isAttachmentPresent() || !recipients.isSingleRecipient() || recipients.isGroupRecipient() || recipients.isEmailRecipient()) {
-        sendMediaMessage(transportOptions.getSelectedTransport().isForcedPlaintext(), transportOptions.getSelectedTransport().isForcedSms());
+        sendMediaMessage(sendButton.getSelectedTransport().isForcedPlaintext(), sendButton.getSelectedTransport().isForcedSms());
       } else {
-        sendTextMessage(transportOptions.getSelectedTransport().isForcedPlaintext(), transportOptions.getSelectedTransport().isForcedSms());
+        sendTextMessage(sendButton.getSelectedTransport().isForcedPlaintext(), sendButton.getSelectedTransport().isForcedSms());
       }
     } catch (RecipientFormattingException ex) {
       Toast.makeText(ConversationActivity.this,

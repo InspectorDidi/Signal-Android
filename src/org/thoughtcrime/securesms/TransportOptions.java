@@ -20,6 +20,7 @@ import android.widget.PopupWindow;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -32,23 +33,20 @@ public class TransportOptions {
 
   private final Context                      context;
   private       PopupWindow                  transportPopup;
-  private       ImageButton                  sendButton;
-  private       EditText                     composeText;
   private final List<String>                 enabledTransports = new ArrayList<String>();
   private final Map<String, TransportOption> transportMetadata = new HashMap<String, TransportOption>();
   private       String                       selectedTransport;
   private       boolean                      transportOverride = false;
+  private       OnTransportChangedListener   listener;
 
-  public TransportOptions(Context context, ImageButton sendButton, EditText composeText) {
-    this.context     = context;
-    this.sendButton  = sendButton;
-    this.composeText = composeText;
+  public TransportOptions(Context context) {
+    this.context = context;
   }
 
   private void initializeTransportPopup() {
     if (transportPopup == null) {
       final View selectionMenu = LayoutInflater.from(context).inflate(R.layout.transport_selection, null);
-      final ListView list          = (ListView) selectionMenu.findViewById(R.id.transport_selection_list);
+      final ListView list      = (ListView) selectionMenu.findViewById(R.id.transport_selection_list);
 
       final TransportOptionsAdapter adapter = new TransportOptionsAdapter(context, enabledTransports, transportMetadata);
 
@@ -132,22 +130,23 @@ public class TransportOptions {
     enabledTransports.remove(transportName);
   }
 
-  private void setComposeTextHint(String hint) {
-    if (hint == null) {
-      this.composeText.setHint(null);
-    } else {
-      SpannableString span = new SpannableString(hint);
-      span.setSpan(new RelativeSizeSpan(0.8f), 0, hint.length(), Spannable.SPAN_INCLUSIVE_INCLUSIVE);
-      this.composeText.setHint(span);
-    }
+  public List<String> getEnabledTransports() {
+    return enabledTransports;
   }
 
   private void updateViews() {
     if (selectedTransport == null) return;
 
-    TypedArray drawables = context.obtainStyledAttributes(SEND_ATTRIBUTES);
-    sendButton.setImageResource(getSelectedTransport().drawable);
-    setComposeTextHint(getSelectedTransport().composeHint);
-    drawables.recycle();
+    if (listener != null) {
+      listener.onChange(getSelectedTransport());
+    }
+  }
+
+  public void setOnTransportChangedListener(OnTransportChangedListener listener) {
+    this.listener = listener;
+  }
+
+  public interface OnTransportChangedListener {
+    public void onChange(TransportOption newTransport);
   }
 }
