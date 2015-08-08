@@ -79,6 +79,10 @@ public class SendButton extends ImageButton
     transportOptions.setDefaultTransport(type);
   }
 
+  public void setTransport(TransportOption.Type type){
+    transportOptions.setSelectedTransport(type);
+  }
+
   @Override
   public void onSelected(TransportOption option) {
     transportOptions.setSelectedTransport(option.getType());

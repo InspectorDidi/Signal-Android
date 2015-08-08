@@ -173,6 +173,8 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
   private   InputAwareLayout      container;
   private   View                  composePanel;
   private   View                  composeBubble;
+  private   View                  transportWarning;
+  private   TextView              transportWarningText;
 
   private   AttachmentTypeSelectorAdapter attachmentAdapter;
   private   AttachmentManager             attachmentManager;
@@ -183,11 +185,12 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
   protected HidingImageButton             quickAttachmentToggle;
   private   QuickAttachmentDrawer         quickAttachmentDrawer;
 
-  private Recipients recipients;
-  private long       threadId;
-  private int        distributionType;
-  private boolean    isEncryptedConversation;
-  private boolean    isMmsEnabled = true;
+  private Recipients           recipients;
+  private long                 threadId;
+  private int                  distributionType;
+  private boolean              isEncryptedConversation;
+  private boolean              isMmsEnabled = true;
+  private TransportOption.Type lastReceivedMessageType;
 
   private DynamicTheme    dynamicTheme    = new DynamicTheme();
   private DynamicLanguage dynamicLanguage = new DynamicLanguage();
@@ -767,6 +770,8 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
 
     quickAttachmentDrawer = (QuickAttachmentDrawer) findViewById(R.id.quick_attachment_drawer);
     quickAttachmentToggle = (HidingImageButton)     findViewById(R.id.quick_attachment_toggle);
+    transportWarning      =                         findViewById(R.id.transport_warning_message);
+    transportWarningText  = (TextView)              findViewById(R.id.transport_warning_message_text);
 
     container.addOnKeyboardShownListener(this);
 
@@ -805,8 +810,18 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
         calculateCharactersRemaining();
         composeText.setTransport(newTransport);
         buttonToggle.getBackground().setColorFilter(newTransport.getBackgroundColor(), Mode.MULTIPLY);
+        updateTransportWarningMessage();
       }
     });
+
+    transportWarning.setOnClickListener(new OnClickListener() {
+      @Override
+      public void onClick(View view) {
+        if (lastReceivedMessageType != null)
+          sendButton.setTransport(lastReceivedMessageType);
+      }
+    });
+    updateTransportWarningMessage();
 
     titleView.setOnClickListener(new OnClickListener() {
       @Override
@@ -1295,6 +1310,24 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
     }
   }
 
+  private void updateTransportWarningMessage(){
+    if(this.lastReceivedMessageType != null){
+      if(this.lastReceivedMessageType == sendButton.getSelectedTransport().getType()){
+        transportWarning.setVisibility(View.GONE);
+      } else {
+        transportWarning.setVisibility(View.VISIBLE);
+        switch(this.lastReceivedMessageType){
+          case SMS:
+            transportWarningText.setText(R.string.ConversationActivity_transport_warning_insecure_sms);
+            break;
+          case TEXTSECURE:
+            transportWarningText.setText(R.string.ConversationActivity_transport_warning_textsecure);
+            break;
+        }
+      }
+    }
+  }
+
   private class EmojiToggleListener implements OnClickListener {
 
     @Override public void onClick(View v) {
@@ -1398,6 +1431,12 @@ public class ConversationActivity extends PassphraseRequiredActionBarActivity
   @Override
   public void setThreadId(long threadId) {
     this.threadId = threadId;
+  }
+
+  @Override
+  public void lastReceivedMessageTransportTypeChanged(TransportOption.Type type){
+    this.lastReceivedMessageType = type;
+    updateTransportWarningMessage();
   }
 
   @Override
