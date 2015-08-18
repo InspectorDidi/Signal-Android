@@ -79,6 +79,10 @@ public class SendButton extends ImageButton
     transportOptions.setDefaultTransport(type);
   }
 
+  public void setTransport(TransportOption.Type type){
+    transportOptions.setSelectedTransport(type);
+  }
+
   @Override
   public void onSelected(TransportOption option) {
     transportOptions.setSelectedTransport(option.getType());
@@ -93,6 +97,13 @@ public class SendButton extends ImageButton
 
   @Override
   public boolean onLongClick(View v) {
+    return showPopupIfNeeded();
+  }
+
+  /**
+   * @return true iff the popup was opened
+   */
+  public boolean showPopupIfNeeded(){
     if (transportOptions.getEnabledTransports().size() > 1) {
       getTransportOptionsPopup().display(transportOptions.getEnabledTransports());
       return true;
